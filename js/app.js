@@ -657,8 +657,13 @@ if (document.getElementById('form-nova-venda')) {
                 document.getElementById('form-nova-venda').reset();
                 itensVenda = [];
                 atualizarTabelaVenda();
-                await carregarProdutos();
-                await carregarKPIs();
+                
+                await Promise.all([
+                    carregarProdutos(),
+                    carregarKPIs(),
+                    carregarGraficoVendas(),
+                    carregarProdutosMaisVendidos()
+                ]);
             }
         } catch (error) {
             console.error('Erro ao realizar venda:', error);
@@ -1075,49 +1080,170 @@ window.imprimirDashboard = function() {
     printWindow.document.close();
 };
 
-// Exportar Vendas para CSV
-window.exportarVendas = async function() {
+// =============================================
+// EXPORTAR VENDAS — Menu CSV / Excel
+// =============================================
+
+// Mostra o menu de opções ao clicar no botão
+window.exportarVendas = function() {
+    // Remove menu anterior se existir
+    const menuAntigo = document.getElementById('menu-exportar');
+    if (menuAntigo) { menuAntigo.remove(); return; }
+
+    const menu = document.createElement('div');
+    menu.id = 'menu-exportar';
+    menu.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: white; border-radius: 12px; padding: 24px; z-index: 9999;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3); min-width: 280px; text-align: center;
+    `;
+    menu.innerHTML = `
+        <h3 style="margin:0 0 8px 0; color:#1e293b; font-size:18px;">Exportar Vendas</h3>
+        <p style="margin:0 0 20px 0; color:#64748b; font-size:14px;">Escolha o formato de exportação</p>
+        <button onclick="exportarCSV()" style="
+            display:block; width:100%; padding:12px; margin-bottom:10px;
+            background:#2563eb; color:white; border:none; border-radius:8px;
+            font-size:15px; cursor:pointer; font-weight:600;">
+            📄 Exportar CSV
+        </button>
+        <button onclick="exportarExcel()" style="
+            display:block; width:100%; padding:12px; margin-bottom:16px;
+            background:#16a34a; color:white; border:none; border-radius:8px;
+            font-size:15px; cursor:pointer; font-weight:600;">
+            📊 Exportar Excel (.xlsx)
+        </button>
+        <button onclick="document.getElementById('menu-exportar').remove()" style="
+            background:none; border:none; color:#94a3b8; cursor:pointer; font-size:13px;">
+            Cancelar
+        </button>
+    `;
+
+    // Fechar ao clicar fora
+    const overlay = document.createElement('div');
+    overlay.id = 'overlay-exportar';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9998;';
+    overlay.onclick = () => { menu.remove(); overlay.remove(); };
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(menu);
+};
+
+// Busca os dados da API (reutilizado pelo CSV e Excel)
+async function buscarVendasParaExportar() {
+    const response = await fetchAPI('/vendas');
+    const vendas = await response.json();
+    if (!vendas || vendas.length === 0) {
+        alert('Nenhuma venda para exportar!');
+        return null;
+    }
+    return vendas;
+}
+
+function fecharMenuExportar() {
+    document.getElementById('menu-exportar')?.remove();
+    document.getElementById('overlay-exportar')?.remove();
+}
+
+// Exportar CSV
+window.exportarCSV = async function() {
+    fecharMenuExportar();
     try {
-        const response = await fetchAPI('/vendas');
-        const vendas = await response.json();
-        
-        if (vendas.length === 0) {
-            alert('Nenhuma venda para exportar!');
-            return;
-        }
-        
-        // Criar CSV
-        let csv = 'ID,Data,Cliente,Vendedor,Valor Total,Desconto,Valor Final,Forma de Pagamento\n';
-        
-        vendas.forEach(venda => {
-            csv += `${venda.idVenda},`;
-            csv += `"${new Date(venda.dataVenda).toLocaleString('pt-BR')}",`;
-            csv += `"${venda.clienteNome || 'Não informado'}",`;
-            csv += `"${venda.vendedorNome}",`;
-            csv += `${venda.valorTotal},`;
-            csv += `${venda.desconto},`;
-            csv += `${venda.valorFinal},`;
-            csv += `"${venda.formaPagamento}"\n`;
+        const vendas = await buscarVendasParaExportar();
+        if (!vendas) return;
+
+        let csv = 'ID,Data,Cliente,Vendedor,Valor Total (R$),Desconto (R$),Valor Final (R$),Forma de Pagamento,Status\n';
+        vendas.forEach(v => {
+            csv += `${v.idVenda},`;
+            csv += `"${new Date(v.dataVenda).toLocaleString('pt-BR')}",`;
+            csv += `"${v.clienteNome || 'Não informado'}",`;
+            csv += `"${v.vendedorNome}",`;
+            csv += `${v.valorTotal},`;
+            csv += `${v.desconto},`;
+            csv += `${v.valorFinal},`;
+            csv += `"${v.formaPagamento}",`;
+            csv += `"${v.status}"\n`;
         });
-        
-        // Baixar arquivo
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        
-        link.setAttribute('href', url);
-        link.setAttribute('download', `vendas_${new Date().toISOString().split('T')[0]}.csv`);
+        link.href = URL.createObjectURL(blob);
+        link.download = `vendas_${new Date().toISOString().split('T')[0]}.csv`;
         link.style.visibility = 'hidden';
-        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        console.log('✅ Vendas exportadas com sucesso!');
-        
-    } catch (error) {
-        console.error('Erro ao exportar vendas:', error);
-        alert('Erro ao exportar vendas. Verifique o console.');
+        console.log('✅ CSV exportado!');
+    } catch (e) {
+        console.error(e);
+        alert('Erro ao exportar CSV.');
+    }
+};
+
+// Exportar Excel usando SheetJS (carrega da CDN automaticamente)
+window.exportarExcel = async function() {
+    fecharMenuExportar();
+    try {
+        // Carrega SheetJS da CDN se ainda não carregou
+        if (!window.XLSX) {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+
+        const vendas = await buscarVendasParaExportar();
+        if (!vendas) return;
+
+        // Montar os dados formatados
+        const dados = vendas.map((v, i) => ({
+            '#':                   i + 1,
+            'ID Venda':            v.idVenda,
+            'Data':                new Date(v.dataVenda).toLocaleString('pt-BR'),
+            'Cliente':             v.clienteNome || 'Não informado',
+            'Vendedor':            v.vendedorNome,
+            'Valor Total (R$)':    parseFloat(v.valorTotal).toFixed(2),
+            'Desconto (R$)':       parseFloat(v.desconto).toFixed(2),
+            'Valor Final (R$)':    parseFloat(v.valorFinal).toFixed(2),
+            'Forma de Pagamento':  v.formaPagamento,
+            'Status':              v.status
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dados);
+
+        // Largura das colunas
+        ws['!cols'] = [
+            { wch: 5 }, { wch: 10 }, { wch: 20 }, { wch: 22 },
+            { wch: 22 }, { wch: 18 }, { wch: 15 }, { wch: 18 }, { wch: 20 }, { wch: 12 }
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Vendas');
+
+        // Adicionar aba de resumo
+        const totalVendas   = vendas.length;
+        const totalReceita  = vendas.reduce((s, v) => s + parseFloat(v.valorFinal), 0).toFixed(2);
+        const totalDesconto = vendas.reduce((s, v) => s + parseFloat(v.desconto), 0).toFixed(2);
+        const ticketMedio   = (totalReceita / totalVendas).toFixed(2);
+
+        const resumo = [
+            { 'Resumo': 'Total de Vendas',    'Valor': totalVendas },
+            { 'Resumo': 'Receita Total (R$)', 'Valor': totalReceita },
+            { 'Resumo': 'Descontos (R$)',     'Valor': totalDesconto },
+            { 'Resumo': 'Ticket Médio (R$)',  'Valor': ticketMedio },
+            { 'Resumo': 'Gerado em',          'Valor': new Date().toLocaleString('pt-BR') },
+        ];
+        const wsResumo = XLSX.utils.json_to_sheet(resumo);
+        wsResumo['!cols'] = [{ wch: 25 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
+
+        XLSX.writeFile(wb, `vendas_${new Date().toISOString().split('T')[0]}.xlsx`);
+        console.log('✅ Excel exportado!');
+    } catch (e) {
+        console.error(e);
+        alert('Erro ao exportar Excel.');
     }
 };
 
