@@ -1,0 +1,126 @@
+.body-sidebar {
+    height: 100vh;
+    width: 300px;
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    flex-shrink: 0;
+}
+
+.body-sidebar .box-vertical {
+    background-color: #1e293b;
+    display: flex;
+    flex-direction: column;
+    /* align-items: center; */
+    height: 100%;
+}
+
+.body-sidebar .box-vertical .header-dashboard .logo{
+    display: flex;
+    align-items: center;
+    padding: 25px;
+}
+
+.body-sidebar .box-vertical .header-dashboard h1{
+    color: white;
+    font-weight: 700;
+    font-size: 22px;
+    padding-left: 10px;
+}
+
+.body-sidebar .box-vertical .header-dashboard hr{
+    background-color: #1e293b62;
+}
+
+.body-sidebar .box-vertical .header-dashboard .salesTrack-img{
+    width: 25px;
+    height: 25px;
+}
+
+.body-sidebar .box-vertical .sidebar-menu{
+    margin-top: 20px;
+}
+
+.body-sidebar .box-vertical .sidebar-menu img{ 
+    width: 25px;
+    height: 25px;
+}
+
+.body-sidebar .box-vertical .sidebar-menu .menu-select{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    width: 240px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    cursor: default;
+    margin-left: 15px;
+}
+
+.body-sidebar .box-vertical .sidebar-menu .menu-select span{
+    color: #f8fafc;
+    font-weight: 500;
+    font-size: 15px;
+}
+
+.body-sidebar .box-vertical .sidebar-menu .menu-select:hover{
+    background-color: #E0E0E0;
+}
+
+.body-sidebar .box-vertical .sidebar-menu .menu-select:hover span{
+    color: #2563eb;
+}
+
+.body-sidebar .box-vertical .sidebar-menu .menu-select.ativo{
+    color: #f8fafc;
+    background-color: #2563eb;
+    font-weight: 700;
+    width: 240px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.body-sidebar .box-vertical .sidebar-menu .menu-select.ativo:hover span{
+    color: #f8fafc;
+    
+}
+
+.body-sidebar .box-vertical .hr-footer{
+    margin-top: auto;
+}
+
+.body-sidebar .box-vertical .footer-sidebar{
+    margin-left: 20px;
+    margin-bottom: 40px;
+    margin-top: 20px;
+}
+
+.body-sidebar .box-vertical .footer-sidebar .usuario h1{
+    color: #f8fafc;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.body-sidebar .box-vertical .footer-sidebar .usuario h2{
+    color: #f8fafc4f;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.body-sidebar .box-vertical .footer-sidebar .logout {
+    margin-top: 15px;
+    color: #f8fafc;
+    background-color: #2563eb;
+    width: 50px;
+    padding: 5px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
