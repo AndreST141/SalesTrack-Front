@@ -1,0 +1,21 @@
+# Variáveis de Ambiente (MUITO IMPORTANTE)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependências (Node)
+node_modules/
+
+# Pasta de build de produção
+dist/
+dist-ssr/
+
+# Arquivos de editores/sistema
+.vscode/
+.idea/
+.DS_Store
