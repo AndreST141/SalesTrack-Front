@@ -91,16 +91,6 @@ O sistema ficará disponível em: `http://localhost:5173`
 
 ---
 
-### Atalho — Iniciar tudo de uma vez
-
-Para facilitar, há um script na raiz do projeto que abre o backend, o frontend e o navegador automaticamente com um duplo clique:
-
-```
-Script_SalesTrack.bat
-```
-
----
-
 ## Credenciais de Teste
 
 | Perfil | Email | Senha |
