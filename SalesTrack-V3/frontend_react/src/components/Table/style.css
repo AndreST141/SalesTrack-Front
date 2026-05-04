@@ -175,6 +175,44 @@
     background: #f8fafc;
 }
 
+/* ── Sortable Headers ─────────────────────────────────────────────────── */
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s, background 0.2s;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sortable:hover {
+    color: #2563eb;
+    background: #eef2ff;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sorted {
+    color: #2563eb;
+    background: #eef2ff;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th .th-sort-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th .sort-icon {
+    font-size: 10px;
+    opacity: 0.35;
+    transition: opacity 0.2s;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sortable:hover .sort-icon {
+    opacity: 0.7;
+}
+
+.body-table .table-wrapper .table-scroll-area .table thead th.th-sorted .sort-icon {
+    opacity: 1;
+    color: #2563eb;
+}
+
 .body-table .table-wrapper .table-scroll-area .table thead .th-acoes {
     text-align: right;
     padding-right: 24px;

@@ -55,7 +55,7 @@ function FilterModal({ isOpen, onClose, filters = [], activeFilters = {}, onAppl
                                 value={localFilters[filter.key] || ''}
                                 onChange={(e) => handleChange(filter.key, e.target.value)}
                             >
-                                <option value="">Todos</option>
+                                {/* <option value="">Todos</option> */}
                                 {(filter.options || []).map((opt) => (
                                     <option key={opt.value} value={opt.value}>
                                         {opt.label}

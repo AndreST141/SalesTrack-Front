@@ -4,14 +4,17 @@ import Router from "./routes/route";
 import { GlobalStyle } from "./styles/style";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import { ConfigProvider } from "./contexts/ConfigContext";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <NotificationProvider>
-      <AuthProvider>
-        <GlobalStyle />
-        <Router />
-      </AuthProvider>
+      <ConfigProvider>
+        <AuthProvider>
+          <GlobalStyle />
+          <Router />
+        </AuthProvider>
+      </ConfigProvider>
     </NotificationProvider>
   </React.StrictMode>
 );

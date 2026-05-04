@@ -27,6 +27,7 @@ function Table({
 }) {
   const [termoBusca, setTermoBusca] = useState('');
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
 
   const activeFilterCount = Object.values(activeFilters).filter(
     (v) => v !== '' && v !== null && v !== undefined
@@ -81,8 +82,33 @@ function Table({
       );
     }
 
+    // Sorting
+    if (sortConfig.key && sortConfig.direction) {
+      result = [...result].sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+
+        // Handle nulls
+        if (valA == null && valB == null) return 0;
+        if (valA == null) return 1;
+        if (valB == null) return -1;
+
+        // Numeric comparison
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+        }
+
+        // String comparison
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     return result;
-  }, [data, termoBusca, searchKeys, activeFilters]);
+  }, [data, termoBusca, searchKeys, activeFilters, sortConfig]);
 
 
   const totalPaginas = Math.max(1, Math.ceil(dadosFiltrados.length / itemsPerPage));
@@ -92,7 +118,15 @@ function Table({
 
   useMemo(() => {
     setPaginaAtual(1);
-  }, [termoBusca, activeFilters]);
+  }, [termoBusca, activeFilters, sortConfig]);
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key !== key) return { key, direction: 'asc' };
+      if (prev.direction === 'asc') return { key, direction: 'desc' };
+      return { key: null, direction: null };
+    });
+  };
 
   const maxBotoesVisiveis = 5;
   const primeiroBotao = Math.max(1, Math.min(paginaAtual - 2, totalPaginas - maxBotoesVisiveis + 1));
@@ -171,7 +205,22 @@ function Table({
             <thead>
               <tr>
                 {columns.map((col) => (
-                  <th key={col.key}>{col.label}</th>
+                  <th
+                    key={col.key}
+                    className={`th-sortable ${sortConfig.key === col.key ? 'th-sorted' : ''}`}
+                    onClick={() => handleSort(col.key)}
+                  >
+                    <span className="th-sort-content">
+                      {col.label}
+                      <span className="sort-icon">
+                        {sortConfig.key === col.key ? (
+                          sortConfig.direction === 'asc' ? '▲' : '▼'
+                        ) : (
+                          '⇅'
+                        )}
+                      </span>
+                    </span>
+                  </th>
                 ))}
                 {actions && <th className="th-acoes">Ações</th>}
               </tr>

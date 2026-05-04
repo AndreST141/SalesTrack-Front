@@ -3,7 +3,7 @@ import Sidebar from "../../components/SideBar/sidebar";
 import './style.css';
 
 function Relatorios() {
-    return(
+    return (
         <div className="body-relatorios">
             <Sidebar />
             <div className="content-relatorios">

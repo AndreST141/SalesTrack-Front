@@ -21,13 +21,15 @@ function Produtos() {
     const [categorias, setCategorias] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalForm, setModalForm] = useState(false);
-    const [modalDelete, setModalDelete] = useState(false);
+    const [modalConfirmarInativar, setModalConfirmarInativar] = useState(false);
     const [produtoSelecionado, setProdutoSelecionado] = useState(null);
     const [form, setForm] = useState(formInicial);
     const [salvando, setSalvando] = useState(false);
+    const [inativando, setInativando] = useState(false);
 
     const [modalFiltros, setModalFiltros] = useState(false);
-    const [activeFilters, setActiveFilters] = useState({});
+    // Padrão: exibir somente ativos
+    const [activeFilters, setActiveFilters] = useState({ _status: 'ativo' });
 
     const { showNotification } = useNotification();
 
@@ -37,8 +39,11 @@ function Produtos() {
     async function carregarDados() {
         setLoading(true);
         try {
+            // Inclui inativos na API apenas quando o filtro pede ou quando quer "todos"
+            const incluirInativos = activeFilters._status === 'inativo' || activeFilters._status === 'todos';
+
             const [resProdutos, resCategorias] = await Promise.all([
-                api.get('/produtos'),
+                api.get(`/produtos${incluirInativos ? '?incluir_inativos=true' : ''}`),
                 api.get('/categorias'),
             ]);
             setProdutos(resProdutos.data);
@@ -51,9 +56,11 @@ function Produtos() {
         }
     }
 
+    // Recarregar quando o filtro de status mudar
     useEffect(() => {
         carregarDados();
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeFilters._status]);
 
     function abrirModalNovo() {
         setProdutoSelecionado(null);
@@ -72,11 +79,6 @@ function Produtos() {
             codigoBarras: produto.codigoBarras || '',
         });
         setModalForm(true);
-    }
-
-    function abrirModalDeletar(produto) {
-        setProdutoSelecionado(produto);
-        setModalDelete(true);
     }
 
     async function salvarProduto() {
@@ -114,23 +116,38 @@ function Produtos() {
         }
     }
 
-    async function excluirProduto() {
+    async function inativarOuReativar() {
         if (!produtoSelecionado) return;
+        setInativando(true);
         try {
-            await api.delete(`/produtos/${produtoSelecionado.idProduto}`);
-            showNotification('Produto excluído com sucesso!', 'success');
-            setModalDelete(false);
-            setProdutoSelecionado(null);
+            const estaAtivo = produtoSelecionado.ativo !== false && produtoSelecionado.ativo !== 0;
+            if (estaAtivo) {
+                // Inativar via DELETE (soft delete)
+                await api.delete(`/produtos/${produtoSelecionado.idProduto}`);
+                showNotification('Produto inativado com sucesso!', 'success');
+            } else {
+                // Reativar via PATCH (conforme instrução)
+                await api.patch(`/produtos/${produtoSelecionado.idProduto}`);
+                showNotification('Produto reativado com sucesso!', 'success');
+            }
+            setModalConfirmarInativar(false);
+            setModalForm(false);
             await carregarDados();
         } catch (err) {
-            console.error('Erro ao excluir produto:', err);
-            showNotification('Erro ao excluir produto', 'error');
+            console.error('Erro ao alterar status do produto:', err);
+            showNotification('Erro ao alterar status do produto', 'error');
+        } finally {
+            setInativando(false);
         }
     }
 
     function handleFormChange(field, value) {
         setForm((prev) => ({ ...prev, [field]: value }));
     }
+
+    const estaAtivo = produtoSelecionado
+        ? produtoSelecionado.ativo !== false && produtoSelecionado.ativo !== 0
+        : true;
 
     const filterDefinitions = [
         { key: 'idProduto', label: 'ID do Produto', type: 'text', placeholder: 'Ex: 1' },
@@ -156,8 +173,9 @@ function Produtos() {
             label: 'Status',
             type: 'select',
             options: [
-                { value: 'ativo', label: 'Ativo' },
-                { value: 'inativo', label: 'Inativo' },
+                { value: 'ativo', label: 'Ativos' },
+                { value: 'inativo', label: 'Inativos' },
+                { value: 'todos', label: 'Todos' },
             ],
         },
     ];
@@ -219,14 +237,9 @@ function Produtos() {
                             </button>
                         }
                         actions={(item) => (
-                            <>
-                                <button className="btn-action" onClick={() => abrirModalEditar(item)}>
-                                    Editar
-                                </button>
-                                <button className="btn-action btn-danger" onClick={() => abrirModalDeletar(item)}>
-                                    Excluir
-                                </button>
-                            </>
+                            <button className="btn-action" onClick={() => abrirModalEditar(item)}>
+                                Editar
+                            </button>
                         )}
                     />
                 </div>
@@ -238,18 +251,31 @@ function Produtos() {
                     onApply={setActiveFilters}
                 />
 
+                {/* Modal Editar / Novo Produto */}
                 <Modal
                     isOpen={modalForm}
                     onClose={() => setModalForm(false)}
                     title={produtoSelecionado ? 'Editar Produto' : 'Novo Produto'}
                     onConfirm={salvarProduto}
                     footer={
-                        <>
-                            <button className="btn-modal-cancel" onClick={() => setModalForm(false)}>Cancelar</button>
-                            <button className="btn-modal-confirm" onClick={salvarProduto} disabled={salvando}>
-                                {salvando ? 'Salvando...' : 'Salvar'}
-                            </button>
-                        </>
+                        <div className="modal-footer-split">
+                            {/* Lado esquerdo: inativar/reativar (somente ao editar) */}
+                            {produtoSelecionado && (
+                                <button
+                                    className={`btn-modal-status ${estaAtivo ? 'btn-modal-inativar' : 'btn-modal-reativar'}`}
+                                    onClick={() => setModalConfirmarInativar(true)}
+                                >
+                                    {estaAtivo ? '⊘ Inativar' : '✓ Reativar'}
+                                </button>
+                            )}
+                            {/* Lado direito: cancelar + salvar */}
+                            <div className="modal-footer-actions">
+                                <button className="btn-modal-cancel" onClick={() => setModalForm(false)}>Cancelar</button>
+                                <button className="btn-modal-confirm" onClick={salvarProduto} disabled={salvando}>
+                                    {salvando ? 'Salvando...' : 'Salvar'}
+                                </button>
+                            </div>
+                        </div>
                     }
                 >
                     <div className="form-group">
@@ -314,24 +340,52 @@ function Produtos() {
                             placeholder="Ex: 7891234567890"
                         />
                     </div>
+
+                    {/* Indicador de status atual */}
+                    {produtoSelecionado && (
+                        <div className={`status-indicator ${estaAtivo ? 'status-ativo' : 'status-inativo'}`}>
+                            <span className="status-dot" />
+                            Status atual: <strong>{estaAtivo ? 'Ativo' : 'Inativo'}</strong>
+                        </div>
+                    )}
                 </Modal>
+
+                {/* Modal confirmar inativar/reativar */}
                 <Modal
-                    isOpen={modalDelete}
-                    onClose={() => setModalDelete(false)}
-                    title="Excluir Produto"
+                    isOpen={modalConfirmarInativar}
+                    onClose={() => setModalConfirmarInativar(false)}
+                    title={estaAtivo ? 'Inativar Produto' : 'Reativar Produto'}
                     maxWidth="420px"
-                    onConfirm={excluirProduto}
+                    onConfirm={inativarOuReativar}
                     footer={
                         <>
-                            <button className="btn-modal-cancel" onClick={() => setModalDelete(false)}>Cancelar</button>
-                            <button className="btn-modal-danger" onClick={excluirProduto}>Excluir</button>
+                            <button className="btn-modal-cancel" onClick={() => setModalConfirmarInativar(false)}>
+                                Cancelar
+                            </button>
+                            <button
+                                className={estaAtivo ? 'btn-modal-inativar-confirm' : 'btn-modal-reativar-confirm'}
+                                onClick={inativarOuReativar}
+                                disabled={inativando}
+                            >
+                                {inativando ? 'Aguarde...' : estaAtivo ? 'Sim, Inativar' : 'Sim, Reativar'}
+                            </button>
                         </>
                     }
                 >
                     <p className="confirm-message">
-                        Deseja realmente excluir o produto<br />
-                        <strong>"{produtoSelecionado?.nome}"</strong>?<br />
-                        Esta ação não pode ser desfeita.
+                        {estaAtivo ? (
+                            <>
+                                Deseja inativar o produto<br />
+                                <strong>"{produtoSelecionado?.nome}"</strong>?<br />
+                                Ele não aparecerá nas vendas, mas poderá ser reativado.
+                            </>
+                        ) : (
+                            <>
+                                Deseja reativar o produto<br />
+                                <strong>"{produtoSelecionado?.nome}"</strong>?<br />
+                                Ele voltará a aparecer nas vendas normalmente.
+                            </>
+                        )}
                     </p>
                 </Modal>
             </div>
